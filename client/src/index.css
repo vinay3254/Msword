@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global resets ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+
+/* ── Rich-text editor content styles ─────────────────────────────── */
+[contenteditable] h1 { font-size: 2em;    font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
+[contenteditable] h2 { font-size: 1.5em;  font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
+[contenteditable] h3 { font-size: 1.17em; font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
+[contenteditable] p  { margin: 0 0 0.5em; }
+[contenteditable] ul { padding-left: 2em; margin: 0.5em 0; list-style-type: disc; }
+[contenteditable] ol { padding-left: 2em; margin: 0.5em 0; list-style-type: decimal; }
+[contenteditable] li { margin: 0.2em 0; }
+[contenteditable] table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+[contenteditable] td, [contenteditable] th {
+  border: 1px solid #aaa;
+  padding: 6px 10px;
+  min-width: 60px;
+  min-height: 26px;
+  vertical-align: top;
+}
+[contenteditable] img   { max-width: 100%; height: auto; display: block; margin: 8px 0; }
+[contenteditable] hr   { border: none; border-top: 2px solid #ccc; margin: 16px 0; }
+[contenteditable] blockquote { margin-left: 2em; border-left: 3px solid #ccc; padding-left: 0.8em; }
+[contenteditable]:focus { outline: none; }
+
+/* ── Print styles ─────────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  .print-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────── */
+.canvas-scroll::-webkit-scrollbar          { width: 14px; }
+.canvas-scroll::-webkit-scrollbar-track   { background: #606060; }
+.canvas-scroll::-webkit-scrollbar-thumb   { background: #909090; border: 2px solid #606060; border-radius: 7px; }
+.canvas-scroll::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
+
+.thin-scroll::-webkit-scrollbar           { height: 4px; width: 4px; }
+.thin-scroll::-webkit-scrollbar-track     { background: #f3f3f3; }
+.thin-scroll::-webkit-scrollbar-thumb     { background: #c0c0c0; border-radius: 2px; }

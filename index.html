@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSWord Clone</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    #root { height: 100vh; display: flex; flex-direction: column; }
+
+    /* Editor content styles */
+    [contenteditable] h1 { font-size: 2em; font-weight: bold; margin: 0.5em 0; line-height: 1.2; }
+    [contenteditable] h2 { font-size: 1.5em; font-weight: bold; margin: 0.5em 0; line-height: 1.2; }
+    [contenteditable] h3 { font-size: 1.17em; font-weight: bold; margin: 0.5em 0; line-height: 1.2; }
+    [contenteditable] p  { margin: 0 0 0.5em 0; }
+    [contenteditable] ul { padding-left: 2em; margin: 0.5em 0; list-style-type: disc; }
+    [contenteditable] ol { padding-left: 2em; margin: 0.5em 0; list-style-type: decimal; }
+    [contenteditable] li { margin: 0.2em 0; }
+    [contenteditable] table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    [contenteditable] td, [contenteditable] th {
+      border: 1px solid #aaa;
+      padding: 6px 10px;
+      min-width: 60px;
+      min-height: 28px;
+      vertical-align: top;
+    }
+    [contenteditable] blockquote { margin-left: 2em; border-left: 3px solid #ccc; padding-left: 0.8em; }
+
+    /* Scrollbar styling for canvas area */
+    .canvas-scroll::-webkit-scrollbar { width: 14px; }
+    .canvas-scroll::-webkit-scrollbar-track { background: #555; }
+    .canvas-scroll::-webkit-scrollbar-thumb { background: #888; border: 2px solid #555; border-radius: 7px; }
+    .canvas-scroll::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+    /* Ribbon scrollbar */
+    .ribbon-scroll::-webkit-scrollbar { height: 4px; }
+    .ribbon-scroll::-webkit-scrollbar-track { background: #f3f3f3; }
+    .ribbon-scroll::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="MSWord.jsx" data-presets="react"></script>
+</body>
+</html>
