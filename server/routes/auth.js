@@ -3,11 +3,10 @@ const jwt    = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User   = require('../models/User');
 
-// Helper: sign a 7-day JWT
-const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// Include name in JWT so Socket.IO can use it without a DB lookup
+const signToken = (id, name) =>
+  jwt.sign({ id, name }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// Helper: format validation errors
 const validate = (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -29,18 +28,12 @@ router.post(
     if (!validate(req, res)) return;
     try {
       const { name, email, password } = req.body;
-
-      if (await User.findOne({ email })) {
+      if (await User.findOne({ email }))
         return res.status(409).json({ message: 'An account with that email already exists' });
-      }
 
       const user  = await User.create({ name, email, password });
-      const token = signToken(user._id);
-
-      res.status(201).json({
-        token,
-        user: { id: user._id, name: user.name, email: user.email },
-      });
+      const token = signToken(user._id, user.name);
+      res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email } });
     } catch (err) {
       console.error('Register error:', err);
       res.status(500).json({ message: 'Server error during registration' });
@@ -59,18 +52,12 @@ router.post(
     if (!validate(req, res)) return;
     try {
       const { email, password } = req.body;
-
-      // Need password field (it's select:false in schema)
       const user = await User.findOne({ email }).select('+password');
-      if (!user || !(await user.comparePassword(password))) {
+      if (!user || !(await user.comparePassword(password)))
         return res.status(401).json({ message: 'Invalid email or password' });
-      }
 
-      const token = signToken(user._id);
-      res.json({
-        token,
-        user: { id: user._id, name: user.name, email: user.email },
-      });
+      const token = signToken(user._id, user.name);
+      res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
     } catch (err) {
       console.error('Login error:', err);
       res.status(500).json({ message: 'Server error during login' });

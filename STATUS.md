@@ -1,163 +1,128 @@
 # MSWord Clone — Project Status
 
-> Last updated: 2026-03-29
+> Last updated: 2026-03-29 — dependencies installed ✅
 
 ---
 
-## ✅ Completed Tasks
-
-### Phase 1 — Standalone Browser Version
-- [x] `index.html` — CDN loader (React 18, Babel Standalone, Tailwind Play CDN)
-- [x] `MSWord.jsx` — Fully self-contained Word clone (no build step, open in browser)
-  - [x] Classic Office ribbon UI (Home tab with all groups)
-  - [x] Font family dropdown (10 fonts)
-  - [x] Font size selector (8–72pt, exact pt sizing via post-processing)
-  - [x] Bold, Italic, Underline, Strikethrough buttons
-  - [x] Text color picker + highlight color picker
-  - [x] Align Left / Center / Right / Justify
-  - [x] Bullet list & numbered list
-  - [x] Indent / Outdent
-  - [x] Undo / Redo (manual innerHTML snapshots, 50-step history)
-  - [x] Heading styles dropdown (Normal, H1, H2, H3)
-  - [x] Insert Table (rows × cols dialog with preview grid)
-  - [x] Clear formatting button
-  - [x] White A4 page canvas (794px) on gray background with drop shadow
-  - [x] `contentEditable` div with `document.execCommand` formatting
-  - [x] Word count + character count in status bar
-  - [x] Save as `.txt` (Blob download)
-  - [x] Save as `.html` (Blob download with embedded CSS)
-  - [x] New Document (with confirmation dialog)
-  - [x] Open `.txt` file (FileReader)
-  - [x] Keyboard shortcuts: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+S
-  - [x] `beforeunload` guard for unsaved changes
-  - [x] Cursor position save/restore around dialogs
-  - [x] Title bar (decorative window controls)
-  - [x] Ribbon tab row (Home / Insert / View)
+## ✅ Completed — Phase 1 (Standalone)
+- `index.html` + `MSWord.jsx` — standalone Word clone, open in browser, no server needed
 
 ---
 
-### Phase 2 — Full-Stack Version
+## ✅ Completed — Phase 2 (Full-Stack)
 
-#### Root / DevOps
-- [x] Root `package.json` with `concurrently` (`npm run dev` starts both)
-- [x] `.env.example` template
-- [x] `README.md` with full setup instructions and API reference
-- [x] `server/.env` — environment file (fixed: was in wrong directory)
+### Backend (`/server`)
+- Express + MongoDB/Mongoose + JWT auth
+- Socket.IO real-time collaboration (rooms per docId, presence, content sync)
+- Rate limiting on auth routes (express-rate-limit)
+- `models/Document.js` — title, content, owner, collaborators (with permission), shareToken, sharePermission, pageSize, margins
+- `models/Version.js` — document snapshots (max 30 per doc, auto-trim)
+- `models/Comment.js` — inline comments anchored via data-comment-id
+- `routes/auth.js` — register, login, /me (JWT includes name for Socket.IO)
+- `routes/docs.js` — CRUD + search + populate collaborators
+- `routes/versions.js` — list, get, create, restore, delete versions
+- `routes/comments.js` — CRUD for inline comments
+- `routes/share.js` — generate/revoke share links, add/remove collaborators by email
+- `routes/upload.js` — multer image upload (local /uploads/ dir)
+- `routes/export.js` — export .docx (html-to-docx), import .docx (mammoth)
 
-#### Backend (`/server`)
-- [x] `server/package.json` — Express, Mongoose, bcryptjs, JWT, Helmet, CORS, Morgan, nodemon
-- [x] `server/index.js` — Express app with Helmet, CORS, Morgan, JSON body parser, error handler
-- [x] `server/models/User.js` — name, email, bcrypt password (select:false), `comparePassword` method
-- [x] `server/models/Document.js` — title, content (HTML), owner, collaborators[], lastModified (auto-updated)
-- [x] `server/middleware/auth.js` — JWT Bearer verification, attaches `req.user`
-- [x] `server/routes/auth.js` — `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
-- [x] `server/routes/docs.js` — Full CRUD (`GET/POST /api/docs`, `GET/PUT/DELETE /api/docs/:id`)
-  - [x] Ownership checks (only owner can delete)
-  - [x] Collaborator read/write access
-  - [x] express-validator input validation on all routes
-  - [x] Proper CastError handling for invalid MongoDB IDs
-- [x] Health check endpoint: `GET /api/health`
+### Frontend (`/client`)
+- React 18 + Vite + Tailwind CSS + React Router v6
+- `socket.io-client` for real-time
+- `dompurify` for content sanitization
 
-#### Frontend (`/client`)
-- [x] `client/package.json` — Vite, React 18, React Router v6, Tailwind CSS, Axios
-- [x] `client/vite.config.js` — Vite + `/api` proxy → `localhost:5000`
-- [x] `client/tailwind.config.js` — Office color palette extended
-- [x] `client/postcss.config.js`
-- [x] `client/index.html` — SVG favicon, root div
-- [x] `client/src/main.jsx` — ReactDOM.createRoot entry
-- [x] `client/src/index.css` — Tailwind + rich-text editor styles + print styles + scrollbar styles
-- [x] `client/src/App.jsx` — BrowserRouter + AuthProvider + protected/public routes
-- [x] `client/src/context/AuthContext.jsx` — `user`, `token`, `login()`, `logout()`, localStorage rehydration
-- [x] `client/src/api/axios.js` — Axios instance, Bearer token interceptor, 401 → redirect to `/login`
-- [x] `client/src/components/ProtectedRoute.jsx` — Redirects to `/login` if not authenticated
-- [x] `client/src/pages/Login.jsx` — Office-blue card UI, form validation, loading spinner
-- [x] `client/src/pages/Register.jsx` — Name + email + password + confirm, client-side validation
-- [x] `client/src/pages/Dashboard.jsx`
-  - [x] Greeting (`Good morning/afternoon/evening, Name`)
-  - [x] Document grid (auto-fill responsive columns)
-  - [x] Document thumbnail cards
-  - [x] Create new document → navigate to editor
-  - [x] Inline rename (click title → input → Enter/blur to save)
-  - [x] Delete with confirmation
-  - [x] Relative timestamps (`Just now`, `5m ago`, `Mar 15`)
-  - [x] Empty state illustration
-  - [x] Error banner with dismiss
-- [x] `client/src/pages/Editor.jsx`
-  - [x] Load document from API on mount
-  - [x] **Auto-save** — 3-second debounce → `PUT /api/docs/:id`, Save badge (Unsaved / Saving… / Saved / Error)
-  - [x] Immediate save on Back button click
-  - [x] Inline editable document title in app bar
-  - [x] **Home tab** — Undo/Redo, Font family/size, B/I/U/S, Text/Highlight color, Alignments, Bullet/Numbered lists, Indent/Outdent, Heading styles, Clear formatting
-  - [x] **Insert tab** — Insert Table (dialog + preview), Insert Image (URL + live preview), Horizontal Rule
-  - [x] **Layout tab** — Page size toggle (A4 / Letter), Margin selector (Normal / Narrow / Wide), live page resize
-  - [x] Export `.txt` and `.html` (Blob download)
-  - [x] Print button (`window.print()`) with print CSS (hides ribbon/toolbar)
-  - [x] Word count + character count + page size in status bar
-  - [x] Keyboard shortcuts: Ctrl+B/I/U/Z/Y/S
-  - [x] Cursor save/restore for all dialogs and color pickers
-  - [x] Undo/Redo (50-step history)
-  - [x] User avatar + name initial in app bar
-  - [x] Back to Dashboard button
+#### Pages
+- `Login.jsx` / `Register.jsx` — Office-themed auth cards
+- `Dashboard.jsx` — doc grid + search/filter + import .docx + shared/collab badges
+- `Editor.jsx` — complete 5-tab ribbon editor (see below)
+- `SharedView.jsx` — public view-only or edit via share token
+
+#### Editor — 5-tab Ribbon
+- **Home**: Undo/Redo, Font family (12), Font size (8–72pt), B/I/U/S, Text color (20 colors + custom), Highlight color, Heading styles (Normal/H1/H2/H3/H4), Align L/C/R/J, Bullet/Numbered lists, Indent/Outdent, Clear formatting, Find & Replace shortcut
+- **Insert**: Table (grid picker + manual), Image (URL or file upload), Link/Unlink, HR, Page Break, Footnote, Table of Contents (auto from headings), Import .docx/.txt, Export .docx/.html/.txt, Print
+- **Layout**: Page size (A4/Letter/Legal), Margins (Normal/Narrow/Wide), Line spacing (1.0–3.0), Page numbers toggle
+- **Review**: Track Changes toggle (beforeinput intercept), Accept All / Reject All, Comments panel toggle, Word Count modal, Version History toggle, Find & Replace
+- **View**: Zoom (25–200%), Ruler toggle, Dark/light mode, Focus mode (distraction-free)
+
+#### Editor Features
+- Auto-save (2s debounce) → `PUT /api/docs/:id`
+- Auto-version snapshot when content changes significantly (>250 chars diff)
+- Undo/Redo (50-step history, innerHTML snapshots)
+- Real-time collaboration via Socket.IO — colored user avatars in app bar
+- Track Changes — wraps insertions in `<ins class="tc-ins">`, Accept/Reject All
+- Keyboard shortcuts: Ctrl+B/I/U/Z/Y/S/F
+- Beforeunload guard for unsaved changes
+- Cursor save/restore around all dialogs
+
+#### Editor Modals
+- `FindReplaceModal` — highlight all matches, navigate, replace one/all
+- `TableDialog` — 10×10 hover grid picker + manual rows/cols input
+- `ImageDialog` — URL tab + file upload tab (POST /api/upload/image)
+- `LinkDialog` — URL + display text + new-tab option
+- `ShareModal` — generate/revoke share link, manage collaborators by email + permission
+- `WordCountModal` — words, chars, paragraphs, lines, pages estimate, reading time
+
+#### Editor Panels (sidebars)
+- `VersionHistoryPanel` — list 30 versions, preview content, restore, save now, delete
+- `CommentsPanel` — add comment on selected text, view/resolve/delete, filter open/resolved
+
+#### Other components
+- `Ruler.jsx` — horizontal ruler with tick marks and margin shading
+- `hooks/useEditor.js` — all formatting logic, undo/redo, insert helpers
+- `hooks/useCollaboration.js` — Socket.IO room management
+- `api/versions.js`, `api/comments.js`, `api/share.js`, `api/upload.js`, `api/exportImport.js`
 
 ---
 
-## ❌ Remaining / Not Yet Done
+## ❌ Not Yet Done
 
-### Setup (Blocking — must do before running full-stack)
-- [ ] **Start MongoDB** locally (`mongod`) or set Atlas URI in `server/.env`
-  ```
-  MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/msword-clone
-  ```
-- [ ] **Change `JWT_SECRET`** in `server/.env` to a long random string (current value is the placeholder)
+### Setup (Blocking — only these two steps remain)
+- [ ] Start MongoDB (`mongod`) or set Atlas URI in `server/.env`
+- [ ] Change `JWT_SECRET` in `server/.env` to a long random string
 
-### Features Not Implemented
-- [ ] **Refresh tokens** — current JWT is single 7-day access token; no silent refresh
-- [ ] **Real-time collaboration** — no WebSocket/Socket.io; multiple users editing same doc will overwrite each other
-- [ ] **Image upload** — Insert Image only supports URLs; no local file upload to server (no Multer)
-- [ ] **Open `.html` file** in editor (standalone version only supports `.txt`)
-- [ ] **Document search** — no search/filter on Dashboard
-- [ ] **Document sorting** — no sort options (currently sorts by lastModified desc)
-- [ ] **Collaborator management UI** — backend supports `collaborators[]` field but no frontend to add/remove them
-- [ ] **Page numbers** — status bar shows "Page 1 of 1" hardcoded; no real pagination
-- [ ] **Spell check dictionary** — uses browser native spellcheck only
-- [ ] **Comment / annotation** system
-- [ ] **Version history** — no document revision tracking
-- [ ] **Zoom control** — no zoom in/out for the canvas
-- [ ] **Find & Replace** — Ctrl+F uses browser native; no custom find/replace dialog
-- [ ] **Table resize handles** — tables are inserted at fixed column width
-- [ ] **Dark mode** for the editor
+### Already Done
+- [x] `npm install` — server dependencies installed (socket.io, html-to-docx, mammoth, multer, etc.)
+- [x] `npm install` — client dependencies installed (socket.io-client, dompurify, etc.)
+
+### Features
+- [ ] Real collaborator cursor positions (pixel-level cursor overlay is complex in contenteditable)
+- [ ] True DOCX export fidelity (html-to-docx handles basic formatting; complex layouts may vary)
+- [ ] PDF export (currently uses window.print(); puppeteer backend route not implemented)
+- [ ] Page numbers (currently decorative top/bottom; no real pagination in contenteditable)
+- [ ] Spell check dictionary (uses browser native spellcheck)
+- [ ] Version diff view (shows preview, no visual diff highlighting between versions)
+- [ ] Real-time comment sync (comments shown on reload; no live Socket.IO comment events)
 
 ### Production Hardening
-- [ ] **HTTPS** — no SSL config; needs reverse proxy (Nginx) or hosting platform
-- [ ] **Rate limiting** — no `express-rate-limit` on auth routes (brute-force risk)
-- [ ] **CSRF protection** — token is in localStorage (XSS risk); not using httpOnly cookies
-- [ ] **Content sanitization** — `innerHTML` is stored as-is; no DOMPurify on save/load
-- [ ] **File size limit** on document content — currently 10 MB body limit but no per-doc size cap
-- [ ] **MongoDB indexes** — `owner` + `lastModified` indexed; no compound index for collaborator queries
-- [ ] **Environment validation** — server crashes if `MONGO_URI` is missing (currently unhandled)
-- [ ] **Docker / docker-compose** — no containerization setup
-- [ ] **CI/CD pipeline** — no GitHub Actions or deployment config
+- [ ] DOMPurify on server-side content save (prevent stored XSS)
+- [ ] HTTPS / reverse proxy
+- [ ] CSRF protection (token in localStorage, not httpOnly cookie)
+- [ ] Docker / docker-compose
+- [ ] CI/CD pipeline
 
 ---
 
-## 🔧 How to Run Right Now
+## 🔧 How to Run
 
-### Standalone (no server needed)
+### Standalone (no server)
 ```
-Open: c:\Users\Admin\Desktop\MSWord\index.html
-in Chrome or Edge — works immediately
+Open: c:\Users\Admin\Desktop\MSWord\index.html in Chrome/Edge
 ```
 
 ### Full-Stack
 ```bash
-# 1. Fix MongoDB (pick one):
-#    a) Start local MongoDB:  mongod --dbpath C:\data\db
-#    b) Use Atlas: set MONGO_URI in server\.env
+# ✅ Dependencies already installed — skip this step
+# npm install / cd server && npm install / cd ../client && npm install
 
-# 2. (Optional) Change JWT_SECRET in server\.env
+# 1. Set up MongoDB (pick one):
+#    a) Local:  mongod --dbpath C:\data\db
+#    b) Atlas:  set MONGO_URI=mongodb+srv://... in server\.env
 
-# 3. Run:
-cd "c:\Users\Admin\Desktop\MSWord"
+# 2. Set a secure JWT secret in server\.env:
+#    JWT_SECRET=your-long-random-secret-here
+
+# 3. Start the app:
+cd c:\Users\Admin\Desktop\MSWord
 npm run dev
 
 # Frontend → http://localhost:5173
@@ -166,50 +131,52 @@ npm run dev
 
 ---
 
-## 📁 File Tree (all created files)
+## 📁 Key New Files (Phase 2 rebuild)
 
 ```
-MSWord/
-├── index.html                          ✅ standalone loader
-├── MSWord.jsx                          ✅ standalone component
-├── package.json                        ✅ concurrently root
-├── .env                                ✅ (root — not used by server)
-├── .env.example                        ✅ template
-├── README.md                           ✅ setup guide
-├── STATUS.md                           ✅ this file
-│
-├── server/
-│   ├── .env                            ✅ fixed — server reads from here
-│   ├── package.json                    ✅
-│   ├── index.js                        ✅ Express entry
-│   ├── middleware/
-│   │   └── auth.js                     ✅ JWT guard
-│   ├── models/
-│   │   ├── User.js                     ✅
-│   │   └── Document.js                 ✅
-│   └── routes/
-│       ├── auth.js                     ✅ register + login + /me
-│       └── docs.js                     ✅ CRUD + ownership
-│
-└── client/
-    ├── index.html                      ✅
-    ├── package.json                    ✅
-    ├── vite.config.js                  ✅ /api proxy
-    ├── tailwind.config.js              ✅
-    ├── postcss.config.js               ✅
-    └── src/
-        ├── main.jsx                    ✅
-        ├── index.css                   ✅ Tailwind + editor styles
-        ├── App.jsx                     ✅ routes
-        ├── api/
-        │   └── axios.js                ✅ interceptor
-        ├── context/
-        │   └── AuthContext.jsx         ✅
-        ├── components/
-        │   └── ProtectedRoute.jsx      ✅
-        └── pages/
-            ├── Login.jsx               ✅
-            ├── Register.jsx            ✅
-            ├── Dashboard.jsx           ✅
-            └── Editor.jsx              ✅ full ribbon editor
+server/
+├── index.js                 ✅ Socket.IO + rate limiting + new routes
+├── models/
+│   ├── Document.js          ✅ updated: shareToken, collaborator permissions
+│   ├── Version.js           ✅ NEW
+│   └── Comment.js           ✅ NEW
+├── routes/
+│   ├── auth.js              ✅ updated: name in JWT
+│   ├── docs.js              ✅ updated: search, new collaborator schema
+│   ├── versions.js          ✅ NEW
+│   ├── comments.js          ✅ NEW
+│   ├── share.js             ✅ NEW
+│   ├── upload.js            ✅ NEW
+│   └── export.js            ✅ NEW
+
+client/src/
+├── App.jsx                  ✅ +SharedView route
+├── index.css                ✅ +TC/comments/dark/footnote/TOC/ruler styles
+├── pages/
+│   ├── Dashboard.jsx        ✅ +search, +import .docx
+│   ├── Editor.jsx           ✅ complete rebuild
+│   └── SharedView.jsx       ✅ NEW
+├── components/
+│   ├── editor/
+│   │   ├── Ribbon.jsx       ✅ NEW — all 5 tabs
+│   │   └── Ruler.jsx        ✅ NEW
+│   ├── modals/
+│   │   ├── FindReplaceModal.jsx  ✅ NEW
+│   │   ├── TableDialog.jsx       ✅ NEW
+│   │   ├── ImageDialog.jsx       ✅ NEW
+│   │   ├── LinkDialog.jsx        ✅ NEW
+│   │   ├── ShareModal.jsx        ✅ NEW
+│   │   └── WordCountModal.jsx    ✅ NEW
+│   └── panels/
+│       ├── VersionHistoryPanel.jsx ✅ NEW
+│       └── CommentsPanel.jsx       ✅ NEW
+├── hooks/
+│   ├── useEditor.js          ✅ NEW
+│   └── useCollaboration.js   ✅ NEW
+└── api/
+    ├── versions.js           ✅ NEW
+    ├── comments.js           ✅ NEW
+    ├── share.js              ✅ NEW
+    ├── upload.js             ✅ NEW
+    └── exportImport.js       ✅ NEW
 ```

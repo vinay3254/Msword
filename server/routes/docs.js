@@ -1,22 +1,28 @@
 const router   = require('express').Router();
 const { body, validationResult } = require('express-validator');
 const Document = require('../models/Document');
+const Version  = require('../models/Version');
 const auth     = require('../middleware/auth');
 
-// All routes in this file require authentication
 router.use(auth);
 
-// Shared query: documents owned by OR shared with the current user
+// Owner OR collaborator (new schema: collaborators is array of {user, permission})
 const userDocsQuery = (userId) => ({
-  $or: [{ owner: userId }, { collaborators: userId }],
+  $or: [{ owner: userId }, { 'collaborators.user': userId }],
 });
 
 // ── GET /api/docs ─────────────────────────────────────────────────────────
-// Returns all documents for the logged-in user (title + metadata only)
 router.get('/', async (req, res) => {
   try {
-    const docs = await Document.find(userDocsQuery(req.user._id))
-      .select('title lastModified createdAt owner')
+    const { search } = req.query;
+    const base = userDocsQuery(req.user._id);
+    const filter = search
+      ? { ...base, title: { $regex: search, $options: 'i' } }
+      : base;
+
+    const docs = await Document.find(filter)
+      .select('title lastModified createdAt owner collaborators shareToken sharePermission')
+      .populate('collaborators.user', 'name email')
       .sort({ lastModified: -1 });
     res.json(docs);
   } catch (err) {
@@ -26,7 +32,6 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /api/docs ────────────────────────────────────────────────────────
-// Create a new document
 router.post(
   '/',
   [
@@ -36,7 +41,6 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
     try {
       const doc = await Document.create({
         title:   req.body.title   || 'Untitled Document',
@@ -52,17 +56,15 @@ router.post(
 );
 
 // ── GET /api/docs/:id ─────────────────────────────────────────────────────
-// Get a single document (owner or collaborator)
 router.get('/:id', async (req, res) => {
   try {
     const doc = await Document.findOne({
       _id: req.params.id,
       ...userDocsQuery(req.user._id),
-    });
+    }).populate('owner', 'name email').populate('collaborators.user', 'name email');
     if (!doc) return res.status(404).json({ message: 'Document not found' });
     res.json(doc);
   } catch (err) {
-    // Invalid ObjectId format
     if (err.name === 'CastError') return res.status(404).json({ message: 'Document not found' });
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch document' });
@@ -70,17 +72,17 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── PUT /api/docs/:id ─────────────────────────────────────────────────────
-// Update title and/or content (owner or collaborator); auto-save endpoint
 router.put(
   '/:id',
   [
     body('title').optional().trim().isLength({ max: 200 }),
     body('content').optional(),
+    body('pageSize').optional().isIn(['A4', 'Letter', 'Legal']),
+    body('margins').optional().isIn(['normal', 'narrow', 'wide']),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
     try {
       const doc = await Document.findOne({
         _id: req.params.id,
@@ -88,12 +90,12 @@ router.put(
       });
       if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-      if (req.body.title   !== undefined) doc.title   = req.body.title;
-      if (req.body.content !== undefined) doc.content = req.body.content;
-      // lastModified updated by pre-save hook
+      if (req.body.title    !== undefined) doc.title    = req.body.title;
+      if (req.body.content  !== undefined) doc.content  = req.body.content;
+      if (req.body.pageSize !== undefined) doc.pageSize = req.body.pageSize;
+      if (req.body.margins  !== undefined) doc.margins  = req.body.margins;
 
       await doc.save();
-      // Return lean response for auto-save performance
       res.json({ _id: doc._id, title: doc.title, lastModified: doc.lastModified });
     } catch (err) {
       if (err.name === 'CastError') return res.status(404).json({ message: 'Document not found' });
@@ -104,14 +106,12 @@ router.put(
 );
 
 // ── DELETE /api/docs/:id ──────────────────────────────────────────────────
-// Delete a document (owner only)
 router.delete('/:id', async (req, res) => {
   try {
-    const doc = await Document.findOneAndDelete({
-      _id:   req.params.id,
-      owner: req.user._id,   // only the owner can delete
-    });
-    if (!doc) return res.status(404).json({ message: 'Document not found or you are not the owner' });
+    const doc = await Document.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
+    if (!doc) return res.status(404).json({ message: 'Document not found or not the owner' });
+    // Clean up versions
+    await Version.deleteMany({ document: req.params.id });
     res.json({ message: 'Document deleted successfully' });
   } catch (err) {
     if (err.name === 'CastError') return res.status(404).json({ message: 'Document not found' });

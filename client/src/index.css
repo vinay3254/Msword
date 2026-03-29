@@ -2,14 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Global resets ────────────────────────────────────────────────── */
+/* ── Global resets ─────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; padding: 0; }
 
-/* ── Rich-text editor content styles ─────────────────────────────── */
-[contenteditable] h1 { font-size: 2em;    font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
-[contenteditable] h2 { font-size: 1.5em;  font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
-[contenteditable] h3 { font-size: 1.17em; font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
+/* ── Rich-text editor content ──────────────────────────────────────────── */
+[contenteditable] h1 { font-size: 2em;    font-weight: 700; margin: 0.67em 0; line-height: 1.2; }
+[contenteditable] h2 { font-size: 1.5em;  font-weight: 700; margin: 0.75em 0; line-height: 1.2; }
+[contenteditable] h3 { font-size: 1.17em; font-weight: 700; margin: 0.83em 0; line-height: 1.2; }
+[contenteditable] h4 { font-size: 1em;    font-weight: 700; margin: 1em 0;    line-height: 1.2; }
 [contenteditable] p  { margin: 0 0 0.5em; }
 [contenteditable] ul { padding-left: 2em; margin: 0.5em 0; list-style-type: disc; }
 [contenteditable] ol { padding-left: 2em; margin: 0.5em 0; list-style-type: decimal; }
@@ -21,30 +22,116 @@ html, body, #root { height: 100%; margin: 0; padding: 0; }
   min-width: 60px;
   min-height: 26px;
   vertical-align: top;
+  position: relative;
 }
-[contenteditable] img   { max-width: 100%; height: auto; display: block; margin: 8px 0; }
+[contenteditable] th { background: #f5f5f5; font-weight: 600; }
+[contenteditable] img  { max-width: 100%; height: auto; display: block; margin: 8px 0; cursor: pointer; }
 [contenteditable] hr   { border: none; border-top: 2px solid #ccc; margin: 16px 0; }
-[contenteditable] blockquote { margin-left: 2em; border-left: 3px solid #ccc; padding-left: 0.8em; }
+[contenteditable] blockquote { margin-left: 2em; border-left: 3px solid #2b579a; padding-left: 0.8em; color: #555; }
+[contenteditable] a { color: #2b579a; text-decoration: underline; }
 [contenteditable]:focus { outline: none; }
 
-/* ── Print styles ─────────────────────────────────────────────────── */
+/* ── Track changes ─────────────────────────────────────────────────────── */
+ins.tc-ins  { background: #d4edda; color: #155724; text-decoration: none; border-bottom: 2px solid #28a745; padding: 0 1px; }
+del.tc-del  { background: #f8d7da; color: #721c24; text-decoration: line-through; padding: 0 1px; }
+
+/* ── Search/find highlight ─────────────────────────────────────────────── */
+.search-highlight        { background: #ffeb3b; border-radius: 2px; }
+.search-highlight.active { background: #ff9800; color: white; }
+
+/* ── Comments ──────────────────────────────────────────────────────────── */
+[data-comment-id] { background: rgba(255, 235, 59, 0.4); border-bottom: 2px solid #f59e0b; cursor: pointer; }
+[data-comment-id]:hover { background: rgba(255, 235, 59, 0.7); }
+[data-comment-id].comment-active { background: rgba(255, 152, 0, 0.3); }
+
+/* ── Page break ────────────────────────────────────────────────────────── */
+.page-break {
+  page-break-after: always;
+  border-top: 2px dashed #aaa;
+  margin: 16px 0;
+  text-align: center;
+  color: #999;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.page-break::before { content: '— Page Break —'; }
+
+/* ── Footnotes ─────────────────────────────────────────────────────────── */
+.footnote-area {
+  border-top: 1px solid #ccc;
+  margin-top: 32px;
+  padding-top: 8px;
+  font-size: 0.82em;
+  color: #555;
+}
+.footnote-area .fn-item { margin-bottom: 4px; }
+sup.fn-ref { cursor: pointer; color: #2b579a; font-size: 0.7em; vertical-align: super; }
+
+/* ── Table of Contents ─────────────────────────────────────────────────── */
+.toc-block { border: 1px solid #ddd; padding: 12px 16px; margin: 12px 0; background: #fafafa; border-radius: 4px; }
+.toc-block .toc-title { font-weight: 700; font-size: 1.1em; margin-bottom: 8px; }
+.toc-block a { color: #2b579a; text-decoration: none; display: block; line-height: 1.8; }
+.toc-block .toc-h1 { padding-left: 0; }
+.toc-block .toc-h2 { padding-left: 1.2em; }
+.toc-block .toc-h3 { padding-left: 2.4em; font-size: 0.95em; }
+
+/* ── Dark mode canvas ──────────────────────────────────────────────────── */
+.editor-dark { background: #1e1e1e !important; color: #d4d4d4 !important; }
+.editor-dark [contenteditable] { color: #d4d4d4 !important; }
+.editor-dark [contenteditable] h1,
+.editor-dark [contenteditable] h2,
+.editor-dark [contenteditable] h3,
+.editor-dark [contenteditable] h4 { color: #ffffff !important; }
+.editor-dark [contenteditable] a { color: #6cb4f7 !important; }
+.editor-dark [contenteditable] table td,
+.editor-dark [contenteditable] table th { border-color: #444 !important; }
+.editor-dark [contenteditable] th { background: #2d2d2d !important; }
+
+/* ── Page number ───────────────────────────────────────────────────────── */
+.page-num-top, .page-num-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  pointer-events: none;
+}
+.page-num-top    { top: 8px; }
+.page-num-bottom { bottom: 8px; }
+
+/* ── Ruler ─────────────────────────────────────────────────────────────── */
+.ruler {
+  height: 20px;
+  background: #f3f3f3;
+  border-bottom: 1px solid #d0d0d0;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  font-size: 9px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+/* ── Print styles ──────────────────────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; }
   .print-page {
     box-shadow: none !important;
     margin: 0 !important;
+    border-radius: 0 !important;
     width: 100% !important;
-    min-height: auto !important;
   }
+  .page-break { border-top: none; }
+  .page-break::before { display: none; }
 }
 
-/* ── Scrollbars ───────────────────────────────────────────────────── */
-.canvas-scroll::-webkit-scrollbar          { width: 14px; }
-.canvas-scroll::-webkit-scrollbar-track   { background: #606060; }
-.canvas-scroll::-webkit-scrollbar-thumb   { background: #909090; border: 2px solid #606060; border-radius: 7px; }
+/* ── Scrollbars ────────────────────────────────────────────────────────── */
+.canvas-scroll::-webkit-scrollbar        { width: 14px; }
+.canvas-scroll::-webkit-scrollbar-track { background: #606060; }
+.canvas-scroll::-webkit-scrollbar-thumb { background: #909090; border: 2px solid #606060; border-radius: 7px; }
 .canvas-scroll::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
 
-.thin-scroll::-webkit-scrollbar           { height: 4px; width: 4px; }
-.thin-scroll::-webkit-scrollbar-track     { background: #f3f3f3; }
-.thin-scroll::-webkit-scrollbar-thumb     { background: #c0c0c0; border-radius: 2px; }
+.thin-scroll::-webkit-scrollbar        { height: 4px; width: 4px; }
+.thin-scroll::-webkit-scrollbar-track  { background: #f3f3f3; }
+.thin-scroll::-webkit-scrollbar-thumb  { background: #c0c0c0; border-radius: 2px; }
