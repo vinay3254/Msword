@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "msword-server",
   "version": "1.0.0",
   "description": "MSWord Clone — Express/MongoDB backend",
@@ -29,5 +30,19 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+=======
+  "name": "msword-clone",
+  "version": "1.0.0",
+  "description": "Full-stack MS Word clone with React, Node.js, Express, and MongoDB",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"Server,Client\" -c \"yellow.bold,cyan.bold\" \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+>>>>>>> 3a37f4d068e37d36f3b2e3ff57e280e210db2fbb
   }
 }
