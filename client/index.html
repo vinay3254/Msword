@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MSWord Clone</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%232b579a'/><text x='4' y='24' font-size='22' fill='white' font-weight='900' font-family='serif'>W</text></svg>" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23007AFF'/><text x='4' y='24' font-size='22' fill='white' font-weight='900' font-family='serif'>W</text></svg>" />
+    <script>
+      (function () {
+        var t = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
   </head>
   <body class="m-0 p-0 h-screen overflow-hidden">
     <div id="root"></div>
