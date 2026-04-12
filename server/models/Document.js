@@ -24,7 +24,9 @@ const documentSchema = new mongoose.Schema(
       index:    true,
     },
     collaborators: [collaboratorSchema],
-    lastModified: { type: Date, default: Date.now, index: true },
+    folder: { type: String, default: 'My Documents' },
+    deleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
 
     // Share-link fields
     shareToken:      { type: String, default: null, index: true, sparse: true },
@@ -32,14 +34,19 @@ const documentSchema = new mongoose.Schema(
 
     // Layout settings persisted per-document
     pageSize: { type: String, enum: ['A4', 'Letter', 'Legal'], default: 'A4' },
-    margins:  { type: String, enum: ['normal', 'narrow', 'wide'], default: 'normal' },
+    margins:  { type: String, enum: ['normal', 'narrow', 'wide', 'custom'], default: 'normal' },
+    customMargins: {
+      top:    { type: String, default: '' },
+      right:  { type: String, default: '' },
+      bottom: { type: String, default: '' },
+      left:   { type: String, default: '' },
+    },
+
+    // Header/footer blocks
+    headerContent: { type: String, default: '' },
+    footerContent: { type: String, default: '' },
   },
   { timestamps: true }
 );
-
-documentSchema.pre('save', function (next) {
-  this.lastModified = new Date();
-  next();
-});
 
 module.exports = mongoose.model('Document', documentSchema);

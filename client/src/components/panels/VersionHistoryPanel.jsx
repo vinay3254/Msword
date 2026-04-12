@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { getVersions, getVersion, createVersion, restoreVersion, deleteVersion } from '../../api/versions';
+
+const SANITIZE_HTML_OPTIONS = {
+  USE_PROFILES: { html: true },
+  ADD_TAGS: ['img'],
+  ADD_ATTR: ['src', 'alt', 'width', 'height', 'style'],
+};
 
 function relTime(dateStr) {
   const d    = new Date(dateStr);
@@ -84,74 +91,108 @@ export default function VersionHistoryPanel({ docId, onRestore, onClose }) {
     }
   };
 
+  const P = { fontFamily: 'Fira Code, monospace' };
+
   return (
-    <div className="flex flex-col h-full bg-white border-l border-gray-200">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#faf8f4', borderLeft: '1px solid #e8e4dc' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-700">Version History</h3>
-        <div className="flex items-center gap-2">
-          <button onClick={handleSaveNow} disabled={saving}
-            className="text-xs px-2.5 py-1 bg-[#2b579a] text-white rounded hover:bg-[#1e3f73] disabled:opacity-50">
+      <div style={{ background: '#0e0e0f', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e1e20', flexShrink: 0 }}>
+        <span style={{ ...P, fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 2 }}>Version History</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={handleSaveNow}
+            disabled={saving}
+            style={{ ...P, fontSize: 9, padding: '4px 10px', background: saving ? '#333' : '#e8b429', color: saving ? '#888' : '#0e0e0f', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}
+          >
             {saving ? 'Saving…' : 'Save now'}
           </button>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
         </div>
       </div>
 
-      {error && <div className="mx-3 mt-2 text-xs text-red-600 bg-red-50 px-2 py-1.5 rounded">{error}</div>}
+      {error && (
+        <div style={{ margin: '8px 12px 0', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderLeft: '2px solid #ef4444', padding: '6px 10px' }}>
+          <span style={{ ...P, fontSize: 10, color: '#fca5a5' }}>{error}</span>
+        </div>
+      )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Version list */}
-        <div className={`flex flex-col overflow-y-auto thin-scroll ${preview ? 'w-36' : 'flex-1'}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', width: preview ? 140 : '100%', flexShrink: 0, borderRight: preview ? '1px solid #e8e4dc' : 'none' }} className="thin-scroll">
           {loading ? (
-            <div className="flex justify-center pt-8"><div className="w-5 h-5 border-2 border-[#2b579a] border-t-transparent rounded-full animate-spin" /></div>
-          ) : versions.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6 px-3">No versions yet. Save a version to track your changes.</p>
-          ) : versions.map(v => (
-            <div key={v._id}
-              onClick={() => handlePreview(v)}
-              className={`px-3 py-2.5 border-b border-gray-100 cursor-pointer hover:bg-blue-50 group ${preview?.version._id === v._id ? 'bg-blue-100' : ''}`}>
-              <div className="text-xs font-medium text-gray-800 truncate">{v.label || 'Auto-save'}</div>
-              <div className="text-xs text-gray-400 mt-0.5">{relTime(v.createdAt)}</div>
-              {v.savedBy && <div className="text-xs text-gray-400">{v.savedBy.name}</div>}
-              {preview?.version._id !== v._id && (
-                <div className="hidden group-hover:flex gap-1 mt-1">
-                  <button onClick={(e) => { e.stopPropagation(); handleRestore(v); }}
-                    disabled={restoring === v._id}
-                    className="text-xs px-1.5 py-0.5 bg-[#2b579a] text-white rounded hover:bg-[#1e3f73]">
-                    Restore
-                  </button>
-                  <button onClick={(e) => handleDelete(v, e)}
-                    className="text-xs px-1.5 py-0.5 border border-gray-300 rounded hover:bg-red-50 hover:text-red-600">
-                    Del
-                  </button>
-                </div>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 32 }}>
+              <div style={{ width: 18, height: 18, border: '2px solid #e8e4dc', borderTopColor: '#e8b429', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
-          ))}
+          ) : versions.length === 0 ? (
+            <p style={{ ...P, fontSize: 10, color: '#c0bbb5', textAlign: 'center', padding: '24px 12px' }}>
+              No versions yet. Click Save now to snapshot.
+            </p>
+          ) : versions.map(v => {
+            const isActive = preview?.version._id === v._id;
+            return (
+              <div
+                key={v._id}
+                onClick={() => handlePreview(v)}
+                style={{ padding: '10px 12px', borderBottom: '1px solid #ede9e0', cursor: 'pointer', background: isActive ? 'rgba(232,180,41,0.1)' : '#faf8f4', borderLeft: isActive ? '2px solid #e8b429' : '2px solid transparent', transition: 'all 0.1s', position: 'relative' }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f5f2eb'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = '#faf8f4'; }}
+                className="group"
+              >
+                <div style={{ ...P, fontSize: 10, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                  {v.label || 'Auto-save'}
+                </div>
+                <div style={{ ...P, fontSize: 9, color: '#b0aca8' }}>{relTime(v.createdAt)}</div>
+                {v.savedBy && <div style={{ ...P, fontSize: 9, color: '#c0bbb5', marginTop: 1 }}>{v.savedBy.name}</div>}
+                {!isActive && (
+                  <div style={{ display: 'none', gap: 4, marginTop: 6 }} className="group-hover-actions">
+                    <button
+                      onClick={e => { e.stopPropagation(); handleRestore(v); }}
+                      disabled={restoring === v._id}
+                      style={{ ...P, fontSize: 8, padding: '3px 7px', background: '#0e0e0f', color: '#e8b429', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={e => handleDelete(v, e)}
+                      style={{ ...P, fontSize: 8, padding: '3px 7px', background: 'transparent', color: '#aaa', border: '1px solid #e0dcd4', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}
+                    >
+                      Del
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Preview pane */}
         {preview && (
-          <div className="flex-1 flex flex-col border-l border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-amber-50 border-b border-amber-200">
-              <span className="text-xs text-amber-800 font-medium">Preview — {relTime(preview.version.createdAt)}</span>
-              <div className="flex gap-2">
-                <button onClick={() => handleRestore(preview.version)} disabled={restoring === preview.version._id}
-                  className="text-xs px-2.5 py-1 bg-[#2b579a] text-white rounded hover:bg-[#1e3f73]">
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ background: 'rgba(232,180,41,0.08)', borderBottom: '1px solid rgba(232,180,41,0.2)', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ ...P, fontSize: 9, color: '#a07800', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Preview · {relTime(preview.version.createdAt)}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => handleRestore(preview.version)}
+                  disabled={restoring === preview.version._id}
+                  style={{ ...P, fontSize: 9, padding: '4px 10px', background: '#0e0e0f', color: '#e8b429', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}
+                >
                   Restore
                 </button>
-                <button onClick={() => setPreview(null)} className="text-gray-400 hover:text-gray-600 text-sm">×</button>
+                <button onClick={() => setPreview(null)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto thin-scroll p-4">
-              <div className="prose prose-sm max-w-none text-sm"
-                dangerouslySetInnerHTML={{ __html: preview.content || '<p class="text-gray-400">(empty)</p>' }}
-              />
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16, fontSize: 12, lineHeight: 1.6, color: '#3a3530' }} className="thin-scroll">
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.content || '<p style="color:#ccc">(empty)</p>', SANITIZE_HTML_OPTIONS) }} />
             </div>
           </div>
         )}
       </div>
+
+      <style>{`
+        .group:hover .group-hover-actions { display: flex !important; }
+      `}</style>
     </div>
   );
 }

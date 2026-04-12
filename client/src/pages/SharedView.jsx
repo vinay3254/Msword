@@ -1,6 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import DOMPurify from 'dompurify';
+import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import { getSharedDoc } from '../api/share';
+
+const SANITIZE_HTML_OPTIONS = {
+  USE_PROFILES: { html: true },
+  ADD_TAGS: ['img'],
+  ADD_ATTR: ['src', 'alt', 'width', 'height', 'style'],
+};
+
+function debounce(fn, delay) {
+  let timeoutId;
+  const debounced = (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+  debounced.cancel = () => clearTimeout(timeoutId);
+  return debounced;
+}
 
 export default function SharedView() {
   const { token }  = useParams();
@@ -11,6 +29,16 @@ export default function SharedView() {
 
   const PAGE_DIMS   = { A4: { w: 794, h: 1123 }, Letter: { w: 816, h: 1056 }, Legal: { w: 816, h: 1344 } };
   const MARGIN_VALS = { normal: 96, narrow: 48, wide: 192 };
+  const saveSharedContent = useCallback(
+    debounce(async (html) => {
+      try {
+        await axios.put(`/api/share/doc/${token}/content`, { content: html });
+      } catch (err) {
+        console.error('Shared save failed', err);
+      }
+    }, 2000),
+    [token]
+  );
 
   useEffect(() => {
     (async () => {
@@ -18,7 +46,7 @@ export default function SharedView() {
         const { data } = await getSharedDoc(token);
         setDoc(data);
         if (editorRef.current) {
-          editorRef.current.innerHTML = data.content || '<p><br></p>';
+          editorRef.current.innerHTML = DOMPurify.sanitize(data.content || '<p><br></p>', SANITIZE_HTML_OPTIONS);
         }
       } catch (e) {
         setError(e.response?.data?.message || 'This link is invalid or has been revoked.');
@@ -31,32 +59,57 @@ export default function SharedView() {
   // Re-set content when editorRef is available and doc is loaded
   useEffect(() => {
     if (doc && editorRef.current && !editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = doc.content || '<p><br></p>';
+      editorRef.current.innerHTML = DOMPurify.sanitize(doc.content || '<p><br></p>', SANITIZE_HTML_OPTIONS);
     }
   }, [doc]);
 
+  useEffect(() => () => {
+    saveSharedContent.cancel?.();
+  }, [saveSharedContent]);
+
+  const SHARED_CSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300&family=Fira+Code:wght@400;500&display=swap');
+    .sv-root { min-height: 100vh; display: flex; flex-direction: column; background: #0e0e0f; font-family: 'Fira Code', monospace; }
+    .sv-banner { background: #0e0e0f; border-bottom: 1px solid #1e1e20; padding: 0 16px; display: flex; align-items: center; gap: 12px; min-height: 44px; flex-shrink: 0; }
+    .sv-brand { width: 28px; height: 28px; background: #e8b429; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #0e0e0f; clip-path: polygon(0 0, 100% 0, 100% 75%, 82% 100%, 0 100%); flex-shrink: 0; font-family: 'Fraunces', serif; }
+    .sv-title { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 500; color: #f5f2eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .sv-sub { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 1.5px; }
+    .sv-badge { font-size: 9px; padding: 3px 8px; border: 1px solid; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+    .sv-badge.edit { border-color: rgba(22,163,74,0.4); color: #4ade80; background: rgba(22,163,74,0.08); }
+    .sv-badge.view { border-color: #333; color: #666; }
+    .sv-signin { font-size: 9px; padding: 5px 12px; background: transparent; border: 1px solid #333; color: #888; text-decoration: none; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.12s; flex-shrink: 0; }
+    .sv-signin:hover { border-color: #e8b429; color: #e8b429; }
+    .sv-canvas { flex: 1; overflow: auto; padding: 40px 16px; background: #606060; }
+    .sv-footer { background: #0e0e0f; border-top: 1px solid #1e1e20; padding: 8px 16px; font-size: 9px; color: #444; text-align: center; flex-shrink: 0; text-transform: uppercase; letter-spacing: 1.5px; }
+    .sv-footer a { color: #666; transition: color 0.12s; }
+    .sv-footer a:hover { color: #e8b429; }
+    @keyframes sv-spin { to { transform: rotate(360deg); } }
+  `;
+
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-[3px] border-[#2b579a] border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-gray-500">Loading shared document…</span>
+    <>
+      <style>{SHARED_CSS}</style>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0e0e0f', flexDirection: 'column', gap: 16 }}>
+        <div style={{ width: 28, height: 28, border: '2px solid #222', borderTopColor: '#e8b429', borderRadius: '50%', animation: 'sv-spin 0.8s linear infinite' }} />
+        <span style={{ fontFamily: 'Fira Code, monospace', fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: 2 }}>Loading shared document</span>
       </div>
-    </div>
+    </>
   );
 
   if (error) return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <div className="bg-white rounded-xl shadow-lg p-8 max-w-sm w-full mx-4 text-center">
-        <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl">🔗</span>
+    <>
+      <style>{SHARED_CSS}</style>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0e0e0f' }}>
+        <div style={{ background: '#111', border: '1px solid #222', padding: 40, maxWidth: 380, width: '100%', margin: '0 16px', textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 48, fontWeight: 300, fontStyle: 'italic', color: '#333', marginBottom: 16, lineHeight: 1 }}>◇</div>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 20, fontWeight: 500, color: '#f5f2eb', marginBottom: 8 }}>Link unavailable</div>
+          <div style={{ fontFamily: 'Fira Code, monospace', fontSize: 10, color: '#555', marginBottom: 24, lineHeight: 1.6 }}>{error}</div>
+          <Link to="/login" style={{ display: 'inline-block', padding: '10px 20px', background: '#e8b429', color: '#0e0e0f', fontFamily: 'Fira Code, monospace', fontSize: 10, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+            Sign in →
+          </Link>
         </div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">Link unavailable</h2>
-        <p className="text-sm text-gray-500 mb-5">{error}</p>
-        <Link to="/login" className="inline-block px-4 py-2 bg-[#2b579a] text-white rounded-lg text-sm font-medium hover:bg-[#1e3f73]">
-          Sign in
-        </Link>
       </div>
-    </div>
+    </>
   );
 
   const dims  = PAGE_DIMS[doc.pageSize]   || PAGE_DIMS.A4;
@@ -64,57 +117,78 @@ export default function SharedView() {
   const isEdit = doc.sharePermission === 'edit';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#606060]">
-      {/* Banner */}
-      <div className="bg-[#2b579a] text-white px-4 py-2.5 flex items-center gap-3 flex-shrink-0">
-        <div className="w-7 h-7 bg-white rounded-md flex items-center justify-center flex-shrink-0">
-          <span className="text-[#2b579a] font-black text-sm font-serif leading-none">W</span>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300&family=Fira+Code:wght@400;500&display=swap');
+        .sv-root { min-height: 100vh; display: flex; flex-direction: column; background: #0e0e0f; font-family: 'Fira Code', monospace; }
+        .sv-banner { background: #0e0e0f; border-bottom: 1px solid #1e1e20; padding: 0 16px; display: flex; align-items: center; gap: 12px; min-height: 44px; flex-shrink: 0; }
+        .sv-brand { width: 28px; height: 28px; background: #e8b429; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #0e0e0f; clip-path: polygon(0 0, 100% 0, 100% 75%, 82% 100%, 0 100%); flex-shrink: 0; }
+        .sv-badge { font-size: 9px; padding: 3px 8px; border: 1px solid; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+        .sv-badge.edit { border-color: rgba(22,163,74,0.4); color: #4ade80; background: rgba(22,163,74,0.08); }
+        .sv-badge.view { border-color: #333; color: #666; }
+        .sv-signin:hover { border-color: #e8b429 !important; color: #e8b429 !important; }
+        .sv-footer a:hover { color: #e8b429; }
+      `}</style>
+      <div className="sv-root">
+        {/* Banner */}
+        <div className="sv-banner">
+          <div className="sv-brand" style={{ fontFamily: 'Georgia, serif' }}>W</div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: 'Fira Code, monospace', fontSize: 13, color: '#f5f2eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {doc.title || 'Untitled Document'}
+            </div>
+            <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 1 }}>
+              Shared by {doc.owner?.name || 'Unknown'} · {isEdit ? 'Editable' : 'View only'}
+            </div>
+          </div>
+
+          <span className={`sv-badge ${isEdit ? 'edit' : 'view'}`}>
+            {isEdit ? 'Edit' : 'Read only'}
+          </span>
+
+          <Link
+            to="/login"
+            className="sv-signin"
+            style={{ fontSize: 9, padding: '5px 12px', background: 'transparent', border: '1px solid #333', color: '#888', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: 1.5, transition: 'all 0.12s', flexShrink: 0 }}
+          >
+            Sign in
+          </Link>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{doc.title || 'Untitled Document'}</div>
-          <div className="text-xs text-white/60">
-            Shared by {doc.owner?.name || 'Unknown'} · {isEdit ? 'You can edit' : 'View only'}
+
+        {/* Canvas */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '40px 16px', background: '#606060' }} className="canvas-scroll">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', width: dims.w, minHeight: dims.h }}>
+              <div
+                ref={editorRef}
+                contentEditable={isEdit}
+                suppressContentEditableWarning
+                spellCheck={isEdit}
+                onInput={(e) => saveSharedContent(e.currentTarget.innerHTML)}
+                style={{
+                  padding:    `${mPad}px`,
+                  minHeight:  dims.h - mPad * 2,
+                  outline:    'none',
+                  wordBreak:  'break-word',
+                  lineHeight: '1.15',
+                  fontFamily: 'Calibri, Arial, sans-serif',
+                  fontSize:   '11pt',
+                }}
+              />
+            </div>
           </div>
         </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isEdit ? 'bg-green-500/30 text-green-200' : 'bg-white/20 text-white/80'}`}>
-          {isEdit ? 'Edit' : 'Read only'}
-        </span>
-        <Link to="/login"
-          className="flex-shrink-0 text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-full font-medium whitespace-nowrap">
-          Sign in
-        </Link>
-      </div>
 
-      {/* Canvas */}
-      <div className="flex-1 overflow-auto canvas-scroll py-8 px-4">
-        <div className="flex justify-center">
-          <div className="bg-white shadow-2xl" style={{ width: dims.w, minHeight: dims.h, borderRadius: 2 }}>
-            <div
-              ref={editorRef}
-              contentEditable={isEdit}
-              suppressContentEditableWarning
-              spellCheck={isEdit}
-              style={{
-                padding:    `${mPad}px`,
-                minHeight:  dims.h - mPad * 2,
-                outline:    'none',
-                wordBreak:  'break-word',
-                lineHeight: '1.15',
-                fontFamily: 'Calibri, Arial, sans-serif',
-                fontSize:   '11pt',
-              }}
-            />
-          </div>
+        {/* Footer */}
+        <div style={{ background: '#0e0e0f', borderTop: '1px solid #1e1e20', padding: '8px 16px', fontSize: 9, color: '#444', textAlign: 'center', flexShrink: 0, textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: 'Fira Code, monospace' }}>
+          {isEdit ? 'Editing · Changes auto-saved' : 'Read-only view'}
+          {' · '}
+          <Link to="/register" style={{ color: '#666', textDecoration: 'none', transition: 'color 0.12s' }} className="sv-footer-link">
+            Create your own documents →
+          </Link>
         </div>
       </div>
-
-      {/* Footer */}
-      <div className="bg-[#2b579a] text-white/50 text-xs px-4 py-1.5 text-center flex-shrink-0">
-        {isEdit ? 'You are editing this shared document. Changes are not saved automatically.' : 'Read-only view · '}
-        <Link to="/register" className="text-white/70 hover:text-white underline ml-1">
-          Create your own documents →
-        </Link>
-      </div>
-    </div>
+    </>
   );
 }

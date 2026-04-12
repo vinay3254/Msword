@@ -96,7 +96,7 @@ router.post('/:docId/:versionId/restore', async (req, res) => {
     doc.content = version.content;
     doc.title   = version.title;
     await doc.save();
-    res.json({ _id: doc._id, title: doc.title, content: doc.content, lastModified: doc.lastModified });
+    res.json({ _id: doc._id, title: doc.title, content: doc.content, updatedAt: doc.updatedAt });
   } catch (err) {
     if (err.name === 'CastError') return res.status(404).json({ message: 'Not found' });
     console.error(err);

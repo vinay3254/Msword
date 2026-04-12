@@ -20,17 +20,17 @@ const storage = multer.diskStorage({
 const fileFilter = (_req, file, cb) => {
   const allowed = /jpeg|jpg|png|gif|webp|svg/;
   const extname = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowed.test(file.mimetype.replace('image/', ''));
-  cb(extname && mimetype ? null : new Error('Only image files are allowed'), extname && mimetype);
+  const mimetype = allowed.test(file.mimetype.toLowerCase());
+  const ok = extname && mimetype;
+  cb(ok ? null : new Error('Images only'), ok);
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── POST /api/upload/image ────────────────────────────────────────────────
 router.post('/image', auth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename });
+  res.json({ url: `http://localhost:5000/uploads/${req.file.filename}` });
 });
 
 module.exports = router;

@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+const replySchema = new mongoose.Schema(
+  {
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    text: { type: String, required: true, maxlength: 2000 },
+    mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const commentSchema = new mongoose.Schema(
   {
     document: {
@@ -12,6 +22,7 @@ const commentSchema = new mongoose.Schema(
     text:     { type: String, required: true, maxlength: 2000 },
     author:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     resolved: { type: Boolean, default: false },
+    replies:  [replySchema],
   },
   { timestamps: true }
 );

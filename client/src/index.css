@@ -1,10 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Typography ────────────────────────────────────────────────────────── */
+:root {
+  --font-ui:   'Cabinet Grotesk', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+}
+
 /* ── Global resets ─────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; padding: 0; }
+body { font-family: var(--font-ui); }
+code, pre, kbd, samp { font-family: var(--font-mono); }
 
 /* ── Rich-text editor content ──────────────────────────────────────────── */
 [contenteditable] h1 { font-size: 2em;    font-weight: 700; margin: 0.67em 0; line-height: 1.2; }
@@ -15,11 +25,11 @@ html, body, #root { height: 100%; margin: 0; padding: 0; }
 [contenteditable] ul { padding-left: 2em; margin: 0.5em 0; list-style-type: disc; }
 [contenteditable] ol { padding-left: 2em; margin: 0.5em 0; list-style-type: decimal; }
 [contenteditable] li { margin: 0.2em 0; }
-[contenteditable] table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+[contenteditable] table { border-collapse: collapse; width: 100%; margin: 8px 0; table-layout: fixed; }
 [contenteditable] td, [contenteditable] th {
-  border: 1px solid #aaa;
-  padding: 6px 10px;
-  min-width: 60px;
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  min-width: 30px;
   min-height: 26px;
   vertical-align: top;
   position: relative;
@@ -32,8 +42,55 @@ html, body, #root { height: 100%; margin: 0; padding: 0; }
 [contenteditable]:focus { outline: none; }
 
 /* ── Track changes ─────────────────────────────────────────────────────── */
-ins.tc-ins  { background: #d4edda; color: #155724; text-decoration: none; border-bottom: 2px solid #28a745; padding: 0 1px; }
-del.tc-del  { background: #f8d7da; color: #721c24; text-decoration: line-through; padding: 0 1px; }
+.tc-del {
+  text-decoration: line-through;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 0 1px;
+  position: relative;
+}
+
+.tc-ins {
+  color: #16a34a;
+  background: #f0fdf4;
+  text-decoration: underline;
+  padding: 0 1px;
+  position: relative;
+}
+
+.tc-actions {
+  display: none;
+  position: absolute;
+  top: -28px;
+  left: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  padding: 2px 4px;
+  gap: 4px;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.tc-ins:hover .tc-actions,
+.tc-del:hover .tc-actions {
+  display: flex;
+}
+
+.tc-accept {
+  color: #16a34a;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.tc-reject {
+  color: #ef4444;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
 
 /* ── Search/find highlight ─────────────────────────────────────────────── */
 .search-highlight        { background: #ffeb3b; border-radius: 2px; }
@@ -43,6 +100,90 @@ del.tc-del  { background: #f8d7da; color: #721c24; text-decoration: line-through
 [data-comment-id] { background: rgba(255, 235, 59, 0.4); border-bottom: 2px solid #f59e0b; cursor: pointer; }
 [data-comment-id]:hover { background: rgba(255, 235, 59, 0.7); }
 [data-comment-id].comment-active { background: rgba(255, 152, 0, 0.3); }
+.mention { color: #3b82f6; font-weight: 500; }
+
+.tc-selected { background: #dbeafe !important; outline: 2px solid #3b82f6; }
+
+td:hover .col-resize-handle,
+th:hover .col-resize-handle {
+  display: block;
+}
+
+.col-resize-handle {
+  display: none;
+  position: absolute;
+  right: -3px;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.table-context-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  padding: 6px;
+}
+
+.table-context-menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.table-context-menu button:hover {
+  background: #eff6ff;
+}
+
+.table-context-menu hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 6px 0;
+}
+
+.spell-context-menu {
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  padding: 6px;
+}
+
+.spell-context-menu button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.spell-context-menu button:hover {
+  background: #eff6ff;
+}
+
+.spell-context-menu hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 6px 0;
+}
+
+.spell-context-empty {
+  font-size: 12px;
+  color: #64748b;
+  padding: 6px 8px;
+}
 
 /* ── Page break ────────────────────────────────────────────────────────── */
 .page-break {
@@ -99,6 +240,67 @@ sup.fn-ref { cursor: pointer; color: #2b579a; font-size: 0.7em; vertical-align: 
 .page-num-top    { top: 8px; }
 .page-num-bottom { bottom: 8px; }
 
+/* ── Page frame layout ─────────────────────────────────────────────────── */
+.editor-pages-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+  background: #f0f0f0;
+  min-height: 100%;
+}
+
+.editor-page {
+  background: white;
+  width: 210mm;
+  min-height: 297mm;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-page.letter { width: 216mm; min-height: 279mm; }
+.editor-page.legal  { width: 216mm; min-height: 356mm; }
+
+.page-overflow-indicator {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+  border-top: 1px dashed #94a3b8;
+  padding-top: 8px;
+  width: min(216mm, 95%);
+  text-align: center;
+}
+
+.doc-header, .doc-footer {
+  width: 210mm;
+  min-height: 1.25cm;
+  padding: 0.5cm 2.54cm;
+  background: white;
+  border-bottom: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 10pt;
+  outline: none;
+}
+
+.doc-footer {
+  border-top: 1px dashed #cbd5e1;
+  border-bottom: none;
+}
+
+.doc-header:focus, .doc-footer:focus {
+  background: #f8fafc;
+  border-color: #3b82f6;
+}
+
+.doc-header[placeholder]:empty::before,
+.doc-footer[placeholder]:empty::before {
+  content: attr(placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
 /* ── Ruler ─────────────────────────────────────────────────────────────── */
 .ruler {
   height: 20px;
@@ -135,3 +337,10 @@ sup.fn-ref { cursor: pointer; color: #2b579a; font-size: 0.7em; vertical-align: 
 .thin-scroll::-webkit-scrollbar        { height: 4px; width: 4px; }
 .thin-scroll::-webkit-scrollbar-track  { background: #f3f3f3; }
 .thin-scroll::-webkit-scrollbar-thumb  { background: #c0c0c0; border-radius: 2px; }
+
+/* ── Ribbon button states ──────────────────────────────────────────────── */
+.ribbon-btn.active {
+  background: #dce6f7 !important;
+  color: #2b579a !important;
+  border: 1px solid #7fb3e8 !important;
+}

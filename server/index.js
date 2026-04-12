@@ -9,6 +9,7 @@ const rateLimit  = require('express-rate-limit');
 const { Server } = require('socket.io');
 const jwt        = require('jsonwebtoken');
 const path       = require('path');
+const Document   = require('./models/Document');
 
 dotenv.config();
 
@@ -16,7 +17,22 @@ const app    = express();
 const server = http.createServer(app);
 
 // ── Security & logging ────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:', '*'],
+      connectSrc: ["'self'", 'http://localhost:5000', 'https://localhost:5000', 'ws://localhost:5000', 'wss://localhost:5000'],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   credentials: true,
@@ -46,6 +62,7 @@ app.use('/api/versions', require('./routes/versions'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/share',    require('./routes/share'));
 app.use('/api/upload',   require('./routes/upload'));
+app.use('/api/ai',       require('./routes/ai'));
 app.use('/api/export',   require('./routes/export'));
 
 // ── Health check ──────────────────────────────────────────────────────────
@@ -84,9 +101,16 @@ io.use((socket, next) => {
 
 const USER_COLORS = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4'];
 const docRooms = new Map(); // docId → Map<socketId, userInfo>
+const normalizeDocId = (payload) => {
+  if (typeof payload === 'string') return payload;
+  if (payload && typeof payload.docId === 'string') return payload.docId;
+  return null;
+};
 
 io.on('connection', (socket) => {
-  socket.on('join-doc', (docId) => {
+  socket.on('join-doc', (payload) => {
+    const docId = normalizeDocId(payload);
+    if (!docId) return;
     socket.currentDoc = docId;
     socket.join(`doc:${docId}`);
 
@@ -110,7 +134,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('leave-doc', (docId) => leave(socket, docId));
+  socket.on('leave-doc', (payload) => {
+    const docId = normalizeDocId(payload);
+    if (docId) leave(socket, docId);
+  });
   socket.on('disconnect', () => { if (socket.currentDoc) leave(socket, socket.currentDoc); });
 
   function leave(socket, docId) {
@@ -135,6 +162,16 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
+
+    setInterval(async () => {
+      try {
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        await Document.deleteMany({ deleted: true, deletedAt: { $lt: cutoff } });
+      } catch (err) {
+        console.error('Trash purge failed:', err.message);
+      }
+    }, 24 * 60 * 60 * 1000);
+
     server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   })
   .catch(err => {

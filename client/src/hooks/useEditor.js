@@ -1,12 +1,22 @@
 import { useRef, useState, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 
 const MAX_HISTORY = 50;
+const CURSOR_MARKER_ID = '__cursor_marker__';
+const SANITIZE_HTML_OPTIONS = {
+  USE_PROFILES: { html: true },
+  ADD_TAGS: ['img'],
+  ADD_ATTR: ['src', 'alt', 'width', 'height', 'style', 'class'],
+  FORBID_TAGS: ['script', 'style'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick'],
+};
 
 export default function useEditor() {
   const editorRef       = useRef(null);
   const savedRangeRef   = useRef(null);
   const historyRef      = useRef([]);
   const historyIndexRef = useRef(-1);
+  const onHistoryRestoreRef = useRef(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -27,8 +37,14 @@ export default function useEditor() {
     const h = historyRef.current;
     const i = historyIndexRef.current;
     if (i <= 0 || !editorRef.current) return;
+
+    saveCursor(editorRef.current);
+    h[i] = editorRef.current.innerHTML;
+
     historyIndexRef.current = i - 1;
     editorRef.current.innerHTML = h[historyIndexRef.current];
+    restoreCursor(editorRef.current);
+    onHistoryRestoreRef.current?.(editorRef.current.innerHTML);
     setCanUndo(historyIndexRef.current > 0);
     setCanRedo(true);
     editorRef.current.dispatchEvent(new Event('input', { bubbles: true }));
@@ -38,11 +54,45 @@ export default function useEditor() {
     const h = historyRef.current;
     const i = historyIndexRef.current;
     if (i >= h.length - 1 || !editorRef.current) return;
+
+    saveCursor(editorRef.current);
+    h[i] = editorRef.current.innerHTML;
+
     historyIndexRef.current = i + 1;
     editorRef.current.innerHTML = h[historyIndexRef.current];
+    restoreCursor(editorRef.current);
+    onHistoryRestoreRef.current?.(editorRef.current.innerHTML);
     setCanUndo(true);
     setCanRedo(historyIndexRef.current < h.length - 1);
     editorRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+  }, []);
+
+  const setOnHistoryRestore = useCallback((handler) => {
+    onHistoryRestoreRef.current = typeof handler === 'function' ? handler : null;
+  }, []);
+
+  const saveCursor = useCallback((container) => {
+    const sel = window.getSelection();
+    if (!container || !sel?.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const marker = document.createElement('span');
+    marker.id = CURSOR_MARKER_ID;
+    marker.style.display = 'none';
+    range.insertNode(marker);
+    return true;
+  }, []);
+
+  const restoreCursor = useCallback((container) => {
+    if (!container) return;
+    const marker = container.querySelector(`#${CURSOR_MARKER_ID}`);
+    if (!marker) return;
+    const range = document.createRange();
+    range.setStartAfter(marker);
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    marker.remove();
   }, []);
 
   // ── Selection management ─────────────────────────────────────────────────
@@ -74,7 +124,8 @@ export default function useEditor() {
   // ── Insert raw HTML at cursor ────────────────────────────────────────────
   const insertHTML = useCallback((html) => {
     restoreRange();
-    document.execCommand('insertHTML', false, html);
+    const clean = DOMPurify.sanitize(html, SANITIZE_HTML_OPTIONS);
+    document.execCommand('insertHTML', false, clean);
     pushHistory(editorRef.current?.innerHTML || '');
   }, [restoreRange, pushHistory]);
 
@@ -105,18 +156,46 @@ export default function useEditor() {
   }, [insertHTML]);
 
   // ── Insert image ─────────────────────────────────────────────────────────
-  const insertImage = useCallback((src, alt = '') => {
-    insertHTML(`<img src="${src}" alt="${alt}" style="max-width:100%"><p><br></p>`);
-  }, [insertHTML]);
+  const insertImage = useCallback((src, alt = 'image') => {
+    if (!src) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    restoreRange();
+    editor.focus();
+
+    // Direct DOM insertion — bypass execCommand entirely for images
+    const sel = window.getSelection();
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = alt || 'image';
+    img.style.cssText = 'max-width:100%;height:auto;display:inline-block;vertical-align:bottom;';
+
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(img);
+      range.setStartAfter(img);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      editor.appendChild(img);
+    }
+
+    pushHistory(editor.innerHTML);
+  }, [editorRef, restoreRange, pushHistory]);
 
   // ── Insert link ──────────────────────────────────────────────────────────
   const insertLink = useCallback((url, text) => {
     restoreRange();
+    const normalizedUrl = String(url || '').trim();
+    if (!normalizedUrl) return;
+    const safeUrl = /^https?:\/\//i.test(normalizedUrl) ? normalizedUrl : `https://${normalizedUrl}`;
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed) {
-      exec('createLink', url);
+      exec('createLink', safeUrl);
     } else {
-      insertHTML(`<a href="${url}" target="_blank">${text || url}</a>`);
+      insertHTML(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text || safeUrl}</a>`);
     }
   }, [restoreRange, exec, insertHTML]);
 
@@ -189,15 +268,11 @@ export default function useEditor() {
   const getHTML = useCallback(() => editorRef.current?.innerHTML || '', []);
   const setHTML = useCallback((html) => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = html;
-      pushHistory(html);
+      const clean = DOMPurify.sanitize(html, SANITIZE_HTML_OPTIONS);
+      editorRef.current.innerHTML = clean;
+      pushHistory(clean);
     }
   }, [pushHistory]);
-
-  // ── Input handler ────────────────────────────────────────────────────────
-  const handleInput = useCallback(() => {
-    // Debounced history push is handled externally by Editor.jsx via onInput
-  }, []);
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
@@ -219,10 +294,7 @@ export default function useEditor() {
     const text = e.clipboardData.getData('text/plain');
     const html  = e.clipboardData.getData('text/html');
     if (html) {
-      // Sanitize: strip scripts/styles but keep formatting
-      const clean = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+      const clean = DOMPurify.sanitize(html, SANITIZE_HTML_OPTIONS);
       document.execCommand('insertHTML', false, clean);
     } else {
       document.execCommand('insertText', false, text);
@@ -238,6 +310,7 @@ export default function useEditor() {
     pushHistory,
     undo,
     redo,
+    setOnHistoryRestore,
     saveRange,
     restoreRange,
     exec,
@@ -253,7 +326,6 @@ export default function useEditor() {
     getWordCount,
     getHTML,
     setHTML,
-    handleInput,
     handleKeyDown,
     handlePaste,
   };

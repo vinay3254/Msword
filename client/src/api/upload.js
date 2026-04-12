@@ -1,9 +1,10 @@
 import api from './axios';
 
-export const uploadImage = (file) => {
-  const fd = new FormData();
-  fd.append('image', file);
-  return api.post('/upload/image', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+export const uploadImage = async (file) => {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await api.post('/upload/image', form, {
+    headers: { 'Content-Type': 'multipart/form-data' }
   });
+  return res.data.url;
 };

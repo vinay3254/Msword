@@ -17,3 +17,13 @@ export const importDocx = (docId, file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const exportPdf = async (docId, title = 'document') => {
+  const res = await api.get(`/export/${docId}/pdf`, { responseType: 'blob' });
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title.replace(/[^\w\s-]/g, '').trim() || 'document'}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+};

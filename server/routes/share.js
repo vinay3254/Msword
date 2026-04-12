@@ -10,11 +10,17 @@ router.post('/:docId', auth, async (req, res) => {
     const doc = await Document.findOne({ _id: req.params.docId, owner: req.user._id });
     if (!doc) return res.status(404).json({ message: 'Document not found or not the owner' });
 
+    const clientOrigin = process.env.CLIENT_ORIGIN;
+    if (!clientOrigin) {
+      console.error('CLIENT_ORIGIN is not set. Unable to generate share link.');
+      return res.status(500).json({ message: 'Server configuration error: CLIENT_ORIGIN is not set' });
+    }
+
     doc.shareToken      = uuidv4();
     doc.sharePermission = req.body.permission === 'edit' ? 'edit' : 'view';
     await doc.save();
 
-    const link = `${req.protocol}://${req.get('host').replace('5000', '5173')}/shared/${doc.shareToken}`;
+    const link = `${clientOrigin.replace(/\/$/, '')}/shared/${doc.shareToken}`;
     res.json({ shareToken: doc.shareToken, sharePermission: doc.sharePermission, link });
   } catch (err) {
     if (err.name === 'CastError') return res.status(404).json({ message: 'Document not found' });
@@ -51,13 +57,25 @@ router.get('/doc/:token', async (req, res) => {
       content:         doc.content,
       sharePermission: doc.sharePermission,
       owner:           doc.owner,
-      lastModified:    doc.lastModified,
+      updatedAt:       doc.updatedAt,
       pageSize:        doc.pageSize,
       margins:         doc.margins,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch shared document' });
+  }
+});
+
+router.put('/doc/:token/content', async (req, res) => {
+  try {
+    const doc = await Document.findOne({ shareToken: req.params.token, sharePermission: 'edit' });
+    if (!doc) return res.status(404).json({ message: 'Not found or not editable' });
+    doc.content = typeof req.body.content === 'string' ? req.body.content : '';
+    await doc.save();
+    res.json({ message: 'Saved' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
